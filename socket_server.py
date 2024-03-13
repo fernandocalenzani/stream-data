@@ -17,9 +17,9 @@ async def fetch_data(url, req_num):
             return {"data": api_data, "req_num": req_num}
 
 
-async def gather_tasks():
+async def gather_tasks(start, end):
     return [fetch_data(API_URL, i)
-            for i in range(1, NUM_REQUESTS + 1)]
+            for i in range(start, end)]
 
 
 def sort_result(item):
@@ -41,11 +41,8 @@ async def package_results(sorted_results):
             for i in range(0, len(sorted_results), CHUNK_SIZE)]
 
 
-async def send_results(websocket, chunks_result):
-    for chunk in chunks_result:
-        await websocket.send(f"{chunk}")
-
-    await websocket.send(f"close_connection")
+async def send_results(websocket, result):
+    await websocket.send(f"{result}")
 
 
 async def handle_websocket(websocket, path):
@@ -56,18 +53,25 @@ async def handle_websocket(websocket, path):
             message = await websocket.recv()
             print(f"Received message: {message}")
 
+            start_make_req = 0
+
             if message == "api":
-                tasks = await gather_tasks()
+                start_make_req += 1
 
-                results = await asyncio.gather(*tasks)
+                while (start_make_req < NUM_REQUESTS):
+                    tasks = await gather_tasks(start_make_req, start_make_req + CHUNK_SIZE)
 
-                sorted_results = await thread_sort_results(results)
+                    results = await asyncio.gather(*tasks)
 
-                package_data = await package_results(sorted_results)
+                    sorted_results = await thread_sort_results(results)
 
-                print(len(package_data))
+                    package_data = await package_results(sorted_results)
 
-                await send_results(websocket, package_data)
+                    await send_results(websocket, package_data)
+
+                    start_make_req += CHUNK_SIZE
+
+                await websocket.send(f"close_connection")
 
     except websockets.exceptions.ConnectionClosedOK:
         print("Connection closed by the client.")
