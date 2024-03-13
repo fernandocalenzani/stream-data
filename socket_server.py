@@ -53,13 +53,13 @@ async def handle_websocket(websocket, path):
             message = await websocket.recv()
             print(f"Received message: {message}")
 
-            start_make_req = 0
+            REQUEST_STATE = 0
 
             if message == "api":
-                start_make_req += 1
+                REQUEST_STATE += 1
 
-                while (start_make_req < NUM_REQUESTS):
-                    tasks = await gather_tasks(start_make_req, start_make_req + CHUNK_SIZE)
+                while (REQUEST_STATE < NUM_REQUESTS):
+                    tasks = await gather_tasks(REQUEST_STATE, REQUEST_STATE + CHUNK_SIZE)
 
                     results = await asyncio.gather(*tasks)
 
@@ -69,9 +69,9 @@ async def handle_websocket(websocket, path):
 
                     await send_results(websocket, package_data)
 
-                    start_make_req += CHUNK_SIZE
+                    REQUEST_STATE += CHUNK_SIZE
 
-                await websocket.send(f"close_connection")
+                await send_results(websocket, "close_connection")
 
     except websockets.exceptions.ConnectionClosedOK:
         print("Connection closed by the client.")
