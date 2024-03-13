@@ -1,6 +1,6 @@
 import asyncio
 import concurrent.futures
-import struct
+import json
 
 import aiohttp
 import websockets
@@ -34,12 +34,9 @@ async def thread_sort_results(results):
     sorted_results = [result for _, result in sorted(
         zip(ordered_results, results))]
 
-    return sorted_results
+    json_data = json.dumps(sorted_results)
 
-
-async def package_results(sorted_results):
-    return [sorted_results[i:i + CHUNK_SIZE]
-            for i in range(0, len(sorted_results), CHUNK_SIZE)]
+    return json_data
 
 
 async def send_results(websocket, result):
@@ -66,9 +63,7 @@ async def handle_websocket(websocket, path):
 
                     sorted_results = await thread_sort_results(results)
 
-                    package_data = await package_results(sorted_results)
-
-                    await send_results(websocket, package_data)
+                    await send_results(websocket, {"response": sorted_results})
 
                     REQUEST_STATE += CHUNK_SIZE
 
@@ -78,13 +73,19 @@ async def handle_websocket(websocket, path):
         print("Connection closed by the client.")
 
 
+async def process_request(path, request_headers):
+    response_headers = [
+        ('Access-Control-Allow-Origin', URL_FRONTEND),
+    ]
+    return None, response_headers
+
 if __name__ == "__main__":
     # Inicializar o loop de eventos asyncio
     loop = asyncio.get_event_loop()
 
     # Criar o servidor WebSocket
     start_server = websockets.serve(
-        handle_websocket, "localhost", 8765, origins=URL_FRONTEND)
+        handle_websocket, "localhost", 8765)
 
     # Iniciar o servidor WebSocket
     loop.run_until_complete(start_server)
