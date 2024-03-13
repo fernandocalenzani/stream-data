@@ -6,8 +6,9 @@ import aiohttp
 import websockets
 
 API_URL = "http://localhost:5000/get-data"
-NUM_REQUESTS = 5000
-CHUNK_SIZE = 500
+NUM_REQUESTS = 5
+CHUNK_SIZE = 1
+URL_FRONTEND = "http://localhost:3000"
 
 
 async def fetch_data(url, req_num):
@@ -82,7 +83,8 @@ if __name__ == "__main__":
     loop = asyncio.get_event_loop()
 
     # Criar o servidor WebSocket
-    start_server = websockets.serve(handle_websocket, "localhost", 8765)
+    start_server = websockets.serve(
+        handle_websocket, "localhost", 8765, origins=URL_FRONTEND)
 
     # Iniciar o servidor WebSocket
     loop.run_until_complete(start_server)
